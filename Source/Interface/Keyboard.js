@@ -24,13 +24,8 @@ provides: [Keyboard]
 */
 
 (function(){
-
-	var parsed = {};
-	var modifiers = ['shift', 'control', 'alt', 'meta'];
-	var regex = /^(?:shift|control|ctrl|alt|meta)$/;
 	
-
-	this.Keyboard = new Class({
+	var Keyboard = this.Keyboard = new Class({
 
 		Extends: Events,
 
@@ -44,7 +39,7 @@ provides: [Keyboard]
 			defaultEventType: 'keydown',
 			active: false,
 			events: {},
-			nonParsedEvents: ["activate", "deactivate", "onactivate", "ondeactivate", "changed", "onchanged"]
+			nonParsedEvents: ['activate', 'deactivate', 'onactivate', 'ondeactivate', 'changed', 'onchanged']
 		},
 
 		initialize: function(options){
@@ -72,11 +67,11 @@ provides: [Keyboard]
 			if (!bubbles && this.activeKB) this.activeKB.handle(event, type);
 		},
 
-		addEvent: function(type, fn, internal) {
+		addEvent: function(type, fn, internal){
 			return this.parent(Keyboard.parse(type, this.options.defaultEventType, this.options.nonParsedEvents), fn, internal);
 		},
 
-		removeEvent: function(type, fn) {
+		removeEvent: function(type, fn){
 			return this.parent(Keyboard.parse(type, this.options.defaultEventType, this.options.nonParsedEvents), fn);
 		},
 
@@ -106,7 +101,7 @@ provides: [Keyboard]
 			return this;
 		},
 
-		disable: function(instance) {
+		disable: function(instance){
 			if (instance) {
 				if(instance === this.activeKB) {
 					this.activeKB = null;
@@ -125,7 +120,7 @@ provides: [Keyboard]
 		},
 
 		//management logic
-		manage: function(instance) {
+		manage: function(instance){
 			if (instance.manager) instance.manager.drop(instance);
 			this.instances.push(instance);
 			instance.manager = this;
@@ -133,11 +128,11 @@ provides: [Keyboard]
 			else this._disable(instance);
 		},
 
-		_disable: function(instance) {
+		_disable: function(instance){
 			if (this.activeKB == instance) this.activeKB = null;
 		},
 
-		drop: function(instance) {
+		drop: function(instance){
 			this._disable(instance);
 			this.instances.erase(instance);
 		},
@@ -153,9 +148,14 @@ provides: [Keyboard]
 		}
 
 	});
-
+	
+	var parsed = {};
+	var modifiers = ['shift', 'control', 'alt', 'meta'];
+	var regex = /^(?:shift|control|ctrl|alt|meta)$/;
+	
 	Keyboard.parse = function(type, eventType, ignore){
 		if (ignore && ignore.contains(type.toLowerCase())) return type;
+		
 		type = type.toLowerCase().replace(/^(keyup|keydown):/, function($0, $1){
 			eventType = $1;
 			return '';
@@ -180,19 +180,19 @@ provides: [Keyboard]
 		return eventType + ':' + parsed[type];
 	};
 
-	Keyboard.each = function(keyboard, fn) {
+	Keyboard.each = function(keyboard, fn){
 		var current = keyboard || Keyboard.manager;
-		while(current){
+		while (current){
 			fn.run(current);
 			current = current.activeKB;
 		}
 	};
 
-	Keyboard.stop = function(event) {
+	Keyboard.stop = function(event){
 		event.preventKeyboardPropagation = true;
 	};
 
-	Keyboard.manager = new this.Keyboard({
+	Keyboard.manager = new Keyboard({
 		active: true
 	});
 	
@@ -201,7 +201,7 @@ provides: [Keyboard]
 		keyboard.enableLog();
 		keyboard.log('the following items have focus: ');
 		Keyboard.each(keyboard, function(current){
-				keyboard.log(document.id(current.widget) || current.wiget || current);
+			keyboard.log(document.id(current.widget) || current.wiget || current);
 		});
 	};
 	
