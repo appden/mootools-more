@@ -29,30 +29,6 @@ provides: [Keyboard]
 	var modifiers = ['shift', 'control', 'alt', 'meta'];
 	var regex = /^(?:shift|control|ctrl|alt|meta)$/;
 	
-	var parse = function(type, eventType){
-		type = type.toLowerCase().replace(/^(keyup|keydown):/, function($0, $1){
-			eventType = $1;
-			return '';
-		});
-		
-		if (!parsed[type]){
-			var key = '', mods = {};
-			type.split('+').each(function(part){
-				if (regex.test(part)) mods[part] = true;
-				else key = part;
-			});
-		
-			mods.control = mods.control || mods.ctrl; // allow both control and ctrl
-			var match = '';
-			modifiers.each(function(mod){
-				if (mods[mod]) match += mod + '+';
-			});
-			
-			parsed[type] = match + key;
-		}
-		
-		return eventType + ':' + parsed[type];
-	};
 
 	this.Keyboard = new Class({
 
@@ -67,24 +43,24 @@ provides: [Keyboard]
 			*/
 			defaultEventType: 'keydown',
 			active: false,
-			events: {}
+			events: {},
+			nonParsedEvents: ["activate", "deactivate", "onactivate", "ondeactivate", "changed", "onchanged"]
 		},
 
 		initialize: function(options){
 			this.setOptions(options);
 			//if this is the root manager, nothing manages it
-			if (Keyboard.manager) Keyboard.manager.manage(this);
 			this.setup();
-		},
-
+		}, 
 		setup: function(){
 			this.addEvents(this.options.events);
+			if (Keyboard.manager) Keyboard.manager.manage(this);
 			if (this.options.active) this.activate();
 		},
 
 		handle: function(event, type){
 			//Keyboard.stop(event) prevents key propagation
-			if (!this.active || event.preventKeyboardPropagation) return;
+			if (event.preventKeyboardPropagation) return;
 			
 			var bubbles = !!this.manager;
 			if (bubbles && this.activeKB){
@@ -97,21 +73,19 @@ provides: [Keyboard]
 		},
 
 		addEvent: function(type, fn, internal) {
-			return this.parent(parse(type, this.options.defaultEventType), fn, internal);
+			return this.parent(Keyboard.parse(type, this.options.defaultEventType, this.options.nonParsedEvents), fn, internal);
 		},
 
 		removeEvent: function(type, fn) {
-			return this.parent(parse(type, this.options.defaultEventType), fn);
+			return this.parent(Keyboard.parse(type, this.options.defaultEventType, this.options.nonParsedEvents), fn);
 		},
 
 		activate: function(){
-			this.active = true;
 			return this.enable();
 		},
 
 		deactivate: function(){
-			this.active = false;
-			return this.fireEvent('deactivate');
+			return this.disable();
 		},
 
 		toggleActive: function(){
@@ -124,9 +98,24 @@ provides: [Keyboard]
 				if (instance != this.activeKB) this.previous = this.activeKB;
 				//if we're enabling a child, assign it so that events are now passed to it
 				this.activeKB = instance.fireEvent('activate');
+				Keyboard.manager.fireEvent('changed');
 			} else if (this.manager) {
 				//else we're enabling ourselves, we must ask our parent to do it for us
 				this.manager.enable(this);
+			}
+			return this;
+		},
+
+		disable: function(instance) {
+			if (instance) {
+				if(instance === this.activeKB) {
+					this.activeKB = null;
+					instance.fireEvent('deactivate');
+					Keyboard.manager.fireEvent('changed');
+				}
+			}
+			else if (this.manager) {
+				this.manager.disable(this);
 			}
 			return this;
 		},
@@ -156,16 +145,48 @@ provides: [Keyboard]
 		instances: [],
 
 		trace: function(){
-			this.enableLog();
-			var item = this;
-			this.log('the following items have focus: ');
-			while (item) {
-				this.log(document.id(item.widget) || item.widget || item, 'active: ' + this.active);
-				item = item.activeKB;
-			}
+			Keyboard.trace(this);
+		},
+
+		each: function(fn){
+			Keyboard.each(this, fn);
 		}
 
 	});
+
+	Keyboard.parse = function(type, eventType, ignore){
+		if (ignore && ignore.contains(type.toLowerCase())) return type;
+		type = type.toLowerCase().replace(/^(keyup|keydown):/, function($0, $1){
+			eventType = $1;
+			return '';
+		});
+
+		if (!parsed[type]){
+			var key = '', mods = {};
+			type.split('+').each(function(part){
+				if (regex.test(part)) mods[part] = true;
+				else key = part;
+			});
+
+			mods.control = mods.control || mods.ctrl; // allow both control and ctrl
+			var match = '';
+			modifiers.each(function(mod){
+				if (mods[mod]) match += mod + '+';
+			});
+
+			parsed[type] = match + key;
+		}
+
+		return eventType + ':' + parsed[type];
+	};
+
+	Keyboard.each = function(keyboard, fn) {
+		var current = keyboard || Keyboard.manager;
+		while(current){
+			fn.run(current);
+			current = current.activeKB;
+		}
+	};
 
 	Keyboard.stop = function(event) {
 		event.preventKeyboardPropagation = true;
@@ -175,8 +196,13 @@ provides: [Keyboard]
 		active: true
 	});
 	
-	Keyboard.trace = function(){
-		Keyboard.manager.trace();
+	Keyboard.trace = function(keyboard){
+		keyboard = keyboard || Keyboard.manager;
+		keyboard.enableLog();
+		keyboard.log('the following items have focus: ');
+		Keyboard.each(keyboard, function(current){
+				keyboard.log(document.id(current.widget) || current.wiget || current);
+		});
 	};
 	
 	var handler = function(event){

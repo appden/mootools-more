@@ -227,7 +227,7 @@
 		},
 
 		"Sortables": {
-			"deps": ["More", "Drag.Move"],
+			"deps": ["More", "Drag.Move", "Selectors"],
 			"desc": "Class for creating a drag and drop sorting interface for lists of items."
 		}
 
@@ -306,6 +306,11 @@
 		"Keyboard": {
 			"deps": ["More", "Class.Extras", "Element.Event", "Log"],
 			"desc": "Provides enhanced group key event management."
+		},
+
+		"Keyboard.Extras": {
+			"deps": ["More", "Keyboard"],
+			"desc": "Adds description functionality to the Keyboard"
 		},
 
 		"Mask": {
